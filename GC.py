@@ -1,20 +1,9 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F 
 import torch.distributions as distribution
-import math
 import numpy as np
-import time
-from scipy import stats
-import scipy.special as special
-from scipy.stats import binom
-from scipy.stats import norm
 from scipy.stats import gaussian_kde
 
-
-
-        
-            
 
 class GC(nn.Module):
     """ 
@@ -31,9 +20,6 @@ class GC(nn.Module):
         # calculate the latent Z
         z = self.forward(x)
         V = torch.matmul(z.t(), z)/(len(z)+1)
-        A = torch.cholesky(V, upper=False)
-        A_t_inv = torch.inverse(A.t())
-        # construct latent correlation matrix
         self.V = V
         self.V2 = torch.eye(d).to(x.device)
         self.normal = distribution.multivariate_normal.MultivariateNormal(torch.zeros(d).to(x.device), self.V)
@@ -60,7 +46,6 @@ class GC(nn.Module):
         normal = distribution.Normal(zeros, ones)
         # calculate the latent Z
         z = normal.icdf(u)
-        n, d = z.size()
         return z
 
     '''
@@ -73,12 +58,12 @@ class GC(nn.Module):
         # sample z ~ N(0, V)
         z = self.normal.rsample([n])   
         # convert z to u
-        normal = distribution.Normal(torch.zeros(N, D).to(sorted_xy.device), torch.ones(N, D).to(sorted_xy.device))
+        normal = distribution.Normal(torch.zeros(n, D).to(sorted_xy.device), torch.ones(n, D).to(sorted_xy.device))
         u = normal.cdf(z).clamp(0.00001, 0.99999)
         # convert u to idx
         idx = (N*u).long()
         # idx to x
-        x = torch.zeros(N, D).to(sorted_xy.device)
+        x = torch.zeros(n, D).to(sorted_xy.device)
         for d in range(D):
             idx_d = idx[:, d]
             sorted_x_d = sorted_xy[:, d]
